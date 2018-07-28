@@ -2,10 +2,11 @@ package cyoa
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 )
 
 func init() {
@@ -37,7 +38,6 @@ var defaultHandlerTmpl = `
 
 // 構造体のHandlerはhttpパッケージで定義されており、ServeHTTP(ResponseWriter, *Rewust)で構成される
 func NewHandler(s Story) http.Handler {
-	fmt.Println("NewHandler")
 	return handler{s}
 }
 
@@ -46,11 +46,24 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("ServeHTTP")
-	err := tpl.Execute(w, h.s["intro"])
-	if err != nil {
-		panic(err)
+	path := strings.TrimSpace(r.URL.Path)
+	if path == "" || path == "/" {
+		path = "/intro"
 	}
+	// Slice strings ex) "/intro" => "intro"
+	path = path[1:]
+
+	//                   ["intro"]
+	if chapter, ok := h.s[path]; ok {
+		// Execute: 解析されたテンプレートを指定されたデータオブジェクトに適用し、出力をwrに書き込む
+		err := tpl.Execute(w, chapter)
+		if err != nil {
+			log.Printf("%v", err)
+			http.Error(w, "Something went wrong...", http.StatusInternalServerError)
+		}
+		return
+	}
+	http.Error(w, "Chapter not found", http.StatusNotFound)
 }
 
 // io.Reader: バイト列を読むためのReadメソッドを提供する
