@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"net/http"
 )
 
 func init() {
@@ -33,6 +34,24 @@ var defaultHandlerTmpl = `
     </body>
 </html>
 `
+
+// 構造体のHandlerはhttpパッケージで定義されており、ServeHTTP(ResponseWriter, *Rewust)で構成される
+func NewHandler(s Story) http.Handler {
+	fmt.Println("NewHandler")
+	return handler{s}
+}
+
+type handler struct {
+	s Story
+}
+
+func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("ServeHTTP")
+	err := tpl.Execute(w, h.s["intro"])
+	if err != nil {
+		panic(err)
+	}
+}
 
 // io.Reader: バイト列を読むためのReadメソッドを提供する
 func JsonStory(r io.Reader) (Story, error) {
